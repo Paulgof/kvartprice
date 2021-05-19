@@ -1,7 +1,6 @@
 import csv
 import datetime
 import re
-from functools import partial
 from itertools import product
 
 import requests
@@ -12,7 +11,7 @@ CITY = {
     'name': 'krasnodar',
     'cian_region': 4820
 }
-MAX_PAGE = 55
+MAX_PAGE = 75
 BASE_URL = 'https://{city_name}.cian.ru/cat.php?region={cian_region}&{tale}'.format(
     city_name=CITY['name'],
     cian_region=CITY['cian_region'],
@@ -40,6 +39,14 @@ class NoMorePagesException(Exception):
     message = 'No more pages for scraping'
 
 
+def str_square_to_float(str_square):
+    """
+    Функция для перевода строки в определенном формате в число с плавающей точкой
+    ex.: '1-комн. квартира, 44,22 м²' -> 44.22
+    """
+    return float(re.search(r'(\d+,?\d*)\sм', str_square)[1].replace(',', '.'))
+
+
 def scrape_offer(url):
     response = session.get(url)
     response.raise_for_status()
@@ -53,11 +60,20 @@ def parse_offer(offer_soup):
     views = offer_soup.select_one('div[data-name="OfferStats"] a')
     views_total_value = int(views.get_text().split()[0])
 
-    flat_square: str = offer_soup.select_one('div[data-name="OfferTitle"] h1').text  # todo other squares
-    # ex.: '1-комн. квартира, 44,22 м²' -> 44.22
-    flat_square_value = float(re.search(r'(\d+,?\d*) м', flat_square)[1].replace(',', '.'))
-    floor_info: str = offer_soup.find_all(string=re.compile(r'\d+ из \d+'))[0]
-    flat_floor, total_floors = map(int, floor_info.split(' из '))
+    flat_desc_dict = {}
+    flat_description = offer_soup.select('div[data-name="Description"] div[itemscope=""] > div')
+    for flat_desc_block in [desc_block.get_text(separator='::') for desc_block in flat_description]:
+        desc_value, desc_key = flat_desc_block.split('::')
+        flat_desc_dict[desc_key] = desc_value
+
+    flat_square = flat_desc_dict.get('Общая')
+    flat_square_value = str_square_to_float(flat_square) if flat_square else ''
+    live_square = flat_desc_dict.get('Жилая')
+    live_square_value = str_square_to_float(live_square) if live_square else ''
+    kitchen_square = flat_desc_dict.get('Кухня')
+    kitchen_square_value = str_square_to_float(kitchen_square) if kitchen_square else ''
+    floor = flat_desc_dict.get('Этаж')
+    flat_floor, total_floors = map(int, floor.split(' из '))
 
     geo_info: str = offer_soup.select_one('div[data-name="Geo"] span[itemprop="name"]')['content']
     geo_info_split = geo_info.split(', ')
@@ -69,14 +85,14 @@ def parse_offer(offer_soup):
 
     flat_main_info = offer_soup.select('li[data-name="AdditionalFeatureItem"]')
     dict_main_info = {}
-    for info in map(partial(element.Tag.get_text, separator='::'), flat_main_info):  # todo func-way
-        info_key, info_value = info.split('::')  # todo check all possible elements
+    for info in [main_info_text.get_text(separator='::') for main_info_text in flat_main_info]:
+        info_key, info_value = info.split('::')
         dict_main_info[info_key] = info_value
 
     flat_cian_info = offer_soup.select('div[data-name="BtiHouseData"] div[data-name="Item"]')
     dict_cian_info = {}
-    for info in map(partial(element.Tag.get_text, separator='::'), flat_cian_info):
-        info_key, info_value = info.split('::')  # todo check all possible elements
+    for info in [cian_info_text.get_text(separator='::') for cian_info_text in flat_cian_info]:
+        info_key, info_value = info.split('::')
         dict_cian_info[info_key] = info_value
 
     description = offer_soup.select_one('div[data-name="Description"] p[itemprop="description"]')
@@ -86,6 +102,8 @@ def parse_offer(offer_soup):
         'price': price_value,
         'views': views_total_value,
         'total_square': flat_square_value,
+        'live_square': live_square_value,
+        'kitchen_square': kitchen_square_value,
         'floor': flat_floor, 'total_floors': total_floors,
         'area': area_value,
         'flat_number': flat_number,
@@ -98,7 +116,12 @@ def parse_offer(offer_soup):
         'balcony': dict_main_info.get('Балкон/лоджия', ''),
         'repair_status': dict_main_info.get('Ремонт', ''),
         'window_view': dict_main_info.get('Вид из окон', ''),
-        'house_type': dict_cian_info.get('Тип дома', '')
+        'ceiling': dict_main_info.get('Высота потолков', ''),
+        'house_type': dict_cian_info.get('Тип дома', ''),
+        'house_year': flat_desc_dict.get('Построен', ''),
+        'lifts': dict_cian_info.get('Лифты', ''),
+        'parking': dict_cian_info.get('Парковка', ''),
+        'gas': dict_cian_info.get('Газоснабжение', '')
     }
 
 
@@ -144,10 +167,10 @@ def init_parsing(file_name):
                 }
                 offers_counter += 1
             except HTTPError as http_error:
-                print("[HTTP]: Couldn't scrape page.", http_error)
+                print("[HTTP]: Couldn't scrape offer.", http_error)
                 continue
             except Exception as e:
-                print('[DNG]: Unresolved exception. Continue scraping pages.', e)
+                print('[DNG]: Unresolved exception. Continue scraping offer.', e)
                 continue
 
         page_timer_end = datetime.datetime.now()
@@ -165,14 +188,16 @@ def init_parsing(file_name):
                 continue
 
             with open(file_name, 'a', newline='', encoding='utf-8') as csv_file:
-                csv_writer = csv.writer(csv_file, delimiter=' ', quotechar='|')
+                csv_writer = csv.writer(csv_file, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
                 csv_writer.writerow([
                     offer_id, offer_data['link'], flat_info['price'], ROOM_TYPES[offer_data['room_type']][0],
-                    flat_info['views'], flat_info['total_square'], flat_info['floor'], flat_info['total_floors'],
+                    flat_info['views'], flat_info['total_square'], flat_info['live_square'],
+                    flat_info['kitchen_square'], flat_info['floor'], flat_info['total_floors'],
                     flat_info['area'], flat_info['flat_number'], flat_info['street'], flat_info['district_main'],
-                    flat_info['district_local'], "<flat_info['description']>", flat_info['flat_type'],
+                    flat_info['district_local'], flat_info['description'].replace(';', ''), flat_info['flat_type'],
                     flat_info['toilet'], flat_info['balcony'], flat_info['repair_status'], flat_info['window_view'],
-                    flat_info['house_type']
+                    flat_info['ceiling'], flat_info['house_type'], flat_info['house_year'], flat_info['lifts'],
+                    flat_info['parking'], flat_info['gas']
                 ])
 
         print('[I] Batch has been parsed and saved.')
@@ -184,15 +209,19 @@ def init_parsing(file_name):
     ))
 
 
-if __name__ == '__main__':
+def main():
     current_time = datetime.datetime.now()
     file_stamp = current_time.strftime('%Y%m%d_%H%M')
     file_name = 'cian_flats_{}.csv'.format(file_stamp)
     with open(file_name, 'w', newline='', encoding='utf-8') as flats_file:
-        flats_writer = csv.writer(flats_file, delimiter=' ', quotechar='|')
+        flats_writer = csv.writer(flats_file, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         flats_writer.writerow([
-            'ID', 'Link', 'Price', 'Rooms', 'Views', 'Square', 'Floor', 'Total Floors', 'Area', 'Flat number',
-            'Street', 'District', 'District 2', 'Description', 'Flat Type', 'Toilet', 'Balcony', 'Repair',
-            'Window View', 'House Type'
+            'ID', 'Link', 'Price', 'Rooms', 'Views', 'Square', 'Live Square', 'Kitchen', 'Floor', 'Total Floors',
+            'Area', 'Flat number', 'Street', 'District', 'District 2', 'Description', 'Flat Type', 'Toilet', 'Balcony',
+            'Repair', 'Window View', 'Ceiling', 'House Type', 'House Year', 'Lifts', 'Parking', 'Gas'
         ])
     init_parsing(file_name)
+
+
+if __name__ == '__main__':
+    main()
