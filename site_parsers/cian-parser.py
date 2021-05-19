@@ -194,10 +194,10 @@ def init_parsing(file_name):
                     flat_info['views'], flat_info['total_square'], flat_info['live_square'],
                     flat_info['kitchen_square'], flat_info['floor'], flat_info['total_floors'],
                     flat_info['area'], flat_info['flat_number'], flat_info['street'], flat_info['district_main'],
-                    flat_info['district_local'], flat_info['description'].replace(';', ''), flat_info['flat_type'],
-                    flat_info['toilet'], flat_info['balcony'], flat_info['repair_status'], flat_info['window_view'],
-                    flat_info['ceiling'], flat_info['house_type'], flat_info['house_year'], flat_info['lifts'],
-                    flat_info['parking'], flat_info['gas']
+                    flat_info['district_local'], flat_info['description'].replace(';', ' ').replace('\n', ' '), 
+                    flat_info['flat_type'], flat_info['toilet'], flat_info['balcony'], flat_info['repair_status'], 
+                    flat_info['window_view'], flat_info['ceiling'], flat_info['house_type'], flat_info['house_year'], 
+                    flat_info['lifts'], flat_info['parking'], flat_info['gas']
                 ])
 
         print('[I] Batch has been parsed and saved.')
