@@ -139,7 +139,7 @@ def scrape_page(url):
 
 def init_parsing(file_name):
     timer_start = datetime.datetime.now()
-    offers_counter = 0
+    scraped_offers = set()
     for room_type, page_number in product(ROOM_TYPES.keys(), range(1, MAX_PAGE + 1)):
         page_timer_start = datetime.datetime.now()
         offers_data = {}
@@ -158,19 +158,23 @@ def init_parsing(file_name):
 
         for offer_link in page_offers_links:
             offer_id = int(re.search(r'flat/(\d+)/', offer_link)[1])
-            print('Parsing on url', offer_link)
+            print('Scraping offer on url', offer_link)
             try:
-                offers_data[offer_id] = {
+                if offer_id in scraped_offers:
+                    print('[DOUBLE] Offer {} already scraped. Pass to next.'.format(offer_id))
+                    continue
+
+                offers_data[offer_id] = {  # todo: use asyncio get
                     'link': offer_link,
                     'room_type': room_type,
                     'soup': scrape_offer(offer_link)
                 }
-                offers_counter += 1
+                scraped_offers.add(offer_id)
             except HTTPError as http_error:
                 print("[HTTP]: Couldn't scrape offer.", http_error)
                 continue
             except Exception as e:
-                print('[DNG]: Unresolved exception. Continue scraping offer.', e)
+                print('[DNG]: Unresolved exception. Continue scraping offers.', e)
                 continue
 
         page_timer_end = datetime.datetime.now()
@@ -205,7 +209,7 @@ def init_parsing(file_name):
     timer_end = datetime.datetime.now()
     print('Scraping past in {} seconds. Fetched {} offers.'.format(
         (timer_end - timer_start).seconds,
-        offers_counter
+        len(scraped_offers)
     ))
 
 
