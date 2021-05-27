@@ -4,7 +4,7 @@ import re
 from itertools import product
 
 import requests
-from bs4 import BeautifulSoup, element
+from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
 
 CITY = {
