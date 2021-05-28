@@ -78,10 +78,12 @@ def parse_offer(offer_soup):
     geo_info: str = offer_soup.select_one('div[data-name="Geo"] span[itemprop="name"]')['content']
     geo_info_split = geo_info.split(', ')
     area_value = geo_info_split[2]
+    district_main = geo_info_split[3]
+    district_local = geo_info_split[4] if len(geo_info_split) > 6 else ''
     flat_number = geo_info_split[-1]
     street = geo_info_split[-2]
-    district_main = geo_info_split[3] if len(geo_info_split) > 5 else ''
-    district_local = geo_info_split[4] if len(geo_info_split) > 6 else ''
+    if 'ул' in flat_number or not any(map(str.isdigit, flat_number)):
+        street, flat_number = flat_number, ''
 
     flat_main_info = offer_soup.select('li[data-name="AdditionalFeatureItem"]')
     dict_main_info = {}
@@ -140,6 +142,7 @@ def scrape_page(url):
 def init_parsing(file_name):
     timer_start = datetime.datetime.now()
     offers_counter = 0
+    flats_hashes = set()
     for room_type, page_number in product(ROOM_TYPES.keys(), range(1, MAX_PAGE + 1)):
         page_timer_start = datetime.datetime.now()
         offers_data = {}
@@ -186,6 +189,20 @@ def init_parsing(file_name):
             except Exception as e:
                 print('[DNG] Exception during parsing. ', e)
                 continue
+
+            flat_hash = '{}{}{}{}{}{}'.format(
+                flat_info['total_square'],
+                offer_data['room_type'],
+                flat_info['floor'],
+                flat_info['district_main'],
+                flat_info['street'],
+                flat_info['flat_number']
+            )
+            if flat_hash in flats_hashes:
+                print('[DOUBLE] Skip offer saving')
+                continue
+
+            flats_hashes.add(flat_hash)
 
             with open(file_name, 'a', newline='', encoding='utf-8') as csv_file:
                 csv_writer = csv.writer(csv_file, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
