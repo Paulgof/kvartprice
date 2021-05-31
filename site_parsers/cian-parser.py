@@ -11,7 +11,7 @@ CITY = {
     'name': 'krasnodar',
     'cian_region': 4820
 }
-MAX_PAGE = 75
+MAX_PAGE = 55
 BASE_URL = 'https://{city_name}.cian.ru/cat.php?region={cian_region}&{tale}'.format(
     city_name=CITY['name'],
     cian_region=CITY['cian_region'],
