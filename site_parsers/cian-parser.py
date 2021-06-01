@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
 
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -60,7 +61,7 @@ def str_square_to_float(str_square):
 
 def scrape_offer(url):
     browser.get(url)
-    WebDriverWait(browser, 60).until(EC.title_contains('база'))
+    WebDriverWait(browser, 60).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'span[itemprop="price"]')))
     offer_soup = BeautifulSoup(browser.page_source, 'lxml')
     return offer_soup
 
@@ -200,6 +201,9 @@ def init_parsing(file_name):
                 room_type,
                 (page_timer_end - page_timer_start).seconds
             ))
+            for handle in browser.window_handles[1:]:
+                browser.switch_to.window(handle)
+                browser.close()
 
             for offer_id, offer_data in offers_data.items():
                 try:
