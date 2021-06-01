@@ -6,6 +6,10 @@ import requests
 from bs4 import BeautifulSoup
 from requests.exceptions import HTTPError
 
+from selenium.webdriver.support import expected_conditions as EC
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+
 CITY = {
     'name': 'krasnodar',
     'cian_region': 4820
@@ -26,6 +30,14 @@ ROOM_TYPES = {
     9: (0, 'студия')
 }
 
+
+def create_browser():
+    options = webdriver.FirefoxOptions()
+    options.add_argument('--headless')
+    return webdriver.Firefox(firefox_options=options, executable_path=r'/home/paul/soft/geckodriver')
+
+
+browser = create_browser()
 session = requests.Session()
 session.headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -47,9 +59,9 @@ def str_square_to_float(str_square):
 
 
 def scrape_offer(url):
-    response = session.get(url)
-    response.raise_for_status()
-    offer_soup = BeautifulSoup(response.text, 'lxml')
+    browser.get(url)
+    WebDriverWait(browser, 60).until(EC.title_contains('база'))
+    offer_soup = BeautifulSoup(browser.page_source, 'lxml')
     return offer_soup
 
 
