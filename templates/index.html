@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+    <title>KvartPrice: оцени стоимость квартиры</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</head>
+<body>
+
+
+
+<form action="prediction" method="post">
+    <div class="form-group">
+        <label>Количество комнат
+            <input type="number" name="rooms" value="1">
+        </label>
+    </div>
+    <div class="form-group">
+        <label for="square">Площадь</label>
+        <input type="number" name="square" step="0.1" value="20.5">
+    </div>
+    <div class="form-group">
+        <label for="flat_floor">Этаж квартиры</label>
+        <input type="number" name="flat_floor" value="1">
+    </div>
+    <div class="form-group">
+        <label for="total_floors">Всего этажей</label>
+        <input type="number" name="total_floors" value="5">
+    </div>
+    <div class="form-group">
+        <label for="district">Район</label>
+        <select name="district" size="1">
+            {% for element in categories["district"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="microdistrict">Микрорайон</label>
+        <select name="microdistrict" size="1">
+            {% for element in categories["misrodistrict"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="toilet">Туалет</label>
+        <select name="toilet" size="1">
+           {% for element in categories["toilet"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="balcony">Балкон</label>
+        <select name="balcony" size="1">
+            {% for element in categories["balcony"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="lifts">Лифт</label>
+        <select name="lifts" size="1">
+            {% for element in categories["lifts"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="repair">Ремонт</label>
+        <select name="repair" size="1">
+            {% for element in categories["repair"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="flat_type">Тип квартиры</label>
+        <select name="flat_type" size="1">
+            {% for element in categories["flat_type"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="house_type">Тип дома</label>
+        <select name="house_type" size="1">
+            {% for element in categories["house_type"] %}
+                <option value="{{ element }}">{{ element }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Предсказать</button>
+</form>
+
+</body>
+</html>
