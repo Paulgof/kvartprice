@@ -26,8 +26,7 @@ ROOM_TYPES = {
     9: (0, 'студия')
 }
 
-session = requests.Session()
-session.headers = {
+headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                   'Chrome/90.0.4430.93 Safari/537.36 OPR/76.0.4017.123',
     'Accept-Language': 'ru'
@@ -47,7 +46,7 @@ def str_square_to_float(str_square):
 
 
 def scrape_offer(url):
-    response = session.get(url)
+    response = requests.get(url, headers=headers)
     response.raise_for_status()
     offer_soup = BeautifulSoup(response.text, 'lxml')
     return offer_soup
@@ -60,9 +59,10 @@ def parse_offer(offer_soup):
     views_total_value = int(views.get_text().split()[0])
 
     flat_desc_dict = {}
-    flat_description = offer_soup.select('div[data-name="Description"] div[itemscope=""] > div')
-    for flat_desc_block in [desc_block.get_text(separator='::') for desc_block in flat_description]:
-        desc_value, desc_key = flat_desc_block.split('::')
+    flat_description = offer_soup.select('div[data-name="ObjectSummaryDescription"] > div > div')
+    for desc_block in flat_description:
+        desc_key = desc_block.select_one('div[data-testid="object-summary-description-title"]').get_text()
+        desc_value = desc_block.select_one('div[data-testid="object-summary-description-value"]').get_text()
         flat_desc_dict[desc_key] = desc_value
 
     flat_square = flat_desc_dict.get('Общая')
@@ -131,7 +131,7 @@ def parse_offer(offer_soup):
 
 
 def scrape_page(url):
-    response = session.get(url, allow_redirects=False)
+    response = requests.get(url, headers=headers, allow_redirects=False)
     response.raise_for_status()
     if response.status_code // 100 == 3:
         raise NoMorePagesException()
